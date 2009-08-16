@@ -21,11 +21,11 @@ sub init(){
   my $soap_user=$self->{'soap_user'};
   my $soap_pass=$self->{'soap_pass'};
   my $soap_port=$self->{'soap_port'};
-  my %devices_list=$self->get_devices($server,$soap_user,$soap_pass,$soap_port);
+  my %devices_list=$self->_get_devices($server,$soap_user,$soap_pass,$soap_port);
   return %devices_list;
 }
 
-sub get_devices(){
+sub _get_devices(){
   my $self = shift;
   my($s,$u,$pw,$port) = @_;
   my $method="get_computers_V1";
@@ -46,10 +46,10 @@ sub get_devices(){
 
   my @params="<REQUEST>
              <ENGINE>FIRST</ENGINE>
-             <ASKING_FOR>META</ASKING_FOR>
-             <CHECKSUM>131071</CHECKSUM>
+             <ASKING_FOR>INVENTORY</ASKING_FOR>
+             <CHECKSUM>1</CHECKSUM>
              <OFFSET>0</OFFSET>
-             <WANTED>131071</WANTED>
+             <WANTED>0</WANTED>
              </REQUEST>";
 
   my $lite = SOAP::Lite
@@ -63,7 +63,7 @@ sub get_devices(){
        my $i = 0;
        for( $lite->paramsall ){
          if (/^<COMPUTER>/) {
-           $result=$self->ocs2nagios(XML::Entities::decode( 'all', $_ ));
+           $result=$self->_ocs2nagios(XML::Entities::decode( 'all', $_ ));
            @split= split(";",$result);
            $hostname=$split[0];
            $hostip=$split[1];
@@ -75,12 +75,12 @@ sub get_devices(){
   return %devices;
 }
 
-sub ocs2nagios() {
+sub _ocs2nagios() {
   my $self = shift;
   my $xml = new XML::Simple;
   my @datas= @_;
   my $data = $xml->XMLin(@datas);
-  return ($data->{NAME}.";".$data->{IPADDR});
+  return ($data->{HARDWARE}->{NAME}.";".$data->{HARDWARE}->{IPADDR});
 }
 
 sub host(){
@@ -121,11 +121,11 @@ Ocs::Nagios - Import OCS Inventory devices in Nagios
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 
 =head1 SYNOPSIS
@@ -140,48 +140,55 @@ our $VERSION = '0.01';
     );
     ...
 
+
+=head1 METHODS
+
+=head2 new() - Create a new OCS::Nagios object 
+
+=head2 init() - Initialize OCS::Nagios object and get devices results 
+
+=head2 host() - Create a Host cfg File 
+
+=head2 service() - Create a Nagios Service in cfg file 
+
 =head1 EXAMPLES
 
 =head2 1. Connect to SOAP OcsInventory Server and generate files for Nagios
 
 This example create a .cfg file for the host, add a host definition and a service ping 
 
-#!/usr/bin/perl
-#
-use strict;
-use warnings;
-use Ocs::Nagios;
+     use strict;
+     use warnings;
+     use Ocs::Nagios;
 
-my $server="192.168.0.100";
-my $soap_user="soap";
-my $soap_pass="pass";
-my $soap_port=80;
-my $directory="/etc/nagios2/conf.d/";
+     my $server="192.168.0.100";
+     my $soap_user="soap";
+     my $soap_pass="pass";
+     my $soap_port=80;
+     my $directory="/etc/nagios2/conf.d/";
 
-my $obj = new Ocs::Nagios( server => $server,
+     my $obj = new Ocs::Nagios( server => $server,
                            soap_user => $soap_user,
                            soap_pass => $soap_pass,
                            soap_port => $soap_port,
                            directory => $directory
-);
+     );
 
-my %hash=$obj->init();
+     my %hash=$obj->init();
 
-while ((my $host,my $ip) = each(%hash)) {
-  print "KEY : $host, Value : $ip\n";
-  # Create a host Object
-  $obj->host( host => $host,
+     while ((my $host,my $ip) = each(%hash)) {
+     print "KEY : $host, Value : $ip\n";
+     # Create a host Object
+     $obj->host( host => $host,
               ip => $ip,
               template => "generic-host"
-  );
-  # Create a SERVICE for this host
-  $obj->service( template => "generic-service",
+     );
+     # Create a SERVICE for this host
+     $obj->service( template => "generic-service",
                  service_description => "PING",
                  check_command => "check_ping!100.0,20%!500.0,60%"
-  );
-
-
-}
+     );
+     }
 
 
 =head1 AUTHOR
