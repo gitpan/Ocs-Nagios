@@ -21,39 +21,6 @@ To install this module, run the following commands:
 	make test
 	make install
 
-Actually, soap method does not return ip address, the request to integrate it 
-in next version of OCSINVENTORY is here http://sourceforge.net/tracker/?func=detail&aid=2791272&group_id=58373&atid=487495
-
-You must apply this patch to get ip address in soap method ( Apache/Ocsinventory/Interface/Inventory.pm) 
-
-97,98c97
-<   #my @mapped_fields = qw / NAME TAG DEVICEID LASTDATE LASTCOME CHECKSUM DATABASEID/;
-<   my @mapped_fields = qw / NAME IPADDR/;
----
->   my @mapped_fields = qw / NAME TAG DEVICEID LASTDATE LASTCOME CHECKSUM DATABASEID/;
-102,103c101,107
-<     my $sql_str = qq/
-<     SELECT
----
->   my $sql_str = qq/
->     SELECT
->       hardware.DEVICEID AS DEVICEID,
->       hardware.LASTDATE AS LASTDATE,
->       hardware.LASTCOME AS LASTCOME,
->       hardware.checksum AS CHECKSUM,
->       hardware.ID AS DATABASEID,
-105,107c109,112
-<       hardware.IPADDR AS IPADDR
-<     FROM hardware
-<     WHERE hardware.ID=?
----
->       accountinfo.TAG AS TAG
->     FROM hardware,accountinfo
->     WHERE accountinfo.HARDWARE_ID=hardware.ID
->     AND ID=?
-109d113
-<
-
 SUPPORT AND DOCUMENTATION
 
 After installing, you can find documentation for this module with the
